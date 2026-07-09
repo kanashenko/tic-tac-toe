@@ -2,7 +2,7 @@ package com.tictactoe.sessionservice.websocket;
 
 import com.tictactoe.sessionservice.service.SimulationService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.socket.CloseStatus;
@@ -14,7 +14,17 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.ObjectMapper;
 
-@Log4j2
+/**
+ * Handles {@code /ws/sessions?sessionId=...} connections: streams every
+ * {@link com.tictactoe.sessionservice.dto.SessionResponse} published for a
+ * session (see {@link SessionEventBroadcaster}) to the client as JSON text
+ * frames, until the session's simulation ends or the client disconnects.
+ *
+ * <p>There is no reconnect/resume support by design — a dropped connection
+ * simply stops the associated simulation (see {@link SimulationService#stop}),
+ * matching the demo scope of this assignment rather than a production SLA.
+ */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SessionWebSocketHandler implements WebSocketHandler {
@@ -27,18 +37,17 @@ public class SessionWebSocketHandler implements WebSocketHandler {
     public Mono<Void> handle(WebSocketSession session) {
         String sessionId = extractSessionId(session);
         if (!StringUtils.hasText(sessionId)) {
-            log.warn("WS connection rejected: Missing sessionId");
+            log.warn("Rejecting WebSocket connection: missing 'sessionId' query parameter");
             return session.close(CloseStatus.BAD_DATA.withReason("Missing sessionId query parameter"));
         }
 
-        log.info(">>> WS session CONNECTED for game: {}", sessionId);
+        log.info("WebSocket connected for session {}", sessionId);
 
         Flux<WebSocketMessage> outbound = broadcaster.subscribe(sessionId)
-                .doOnNext(event -> log.info("<<< WS PREPARING to send event to UI for game: {}", sessionId))
                 .map(objectMapper::writeValueAsString)
                 .map(session::textMessage)
                 .doFinally(signal -> {
-                    log.warn("xxx WS session TERMINATED for game: {}. Signal: {}. DESTROYING SINK!", sessionId, signal);
+                    log.info("WebSocket closed for session {} (signal: {})", sessionId, signal);
                     broadcaster.complete(sessionId);
                     simulationService.stop(sessionId);
                 });

@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.Instant;
 
+/** JPA entity backing the {@code moves} table (H2, in-memory) — one row per move played in a session. */
 @Entity
 @Table(name = "moves", indexes = @Index(name = "idx_moves_session_id", columnList = "sessionId"))
 @Getter
@@ -21,8 +22,10 @@ public class MoveEntity {
 
     private String sessionId;
 
+    /** Zero-based order in which this move was played within its session. */
     private int moveNumber;
 
+    /** "X" or "O". */
     private String player;
 
     @Column(name = "row_index")

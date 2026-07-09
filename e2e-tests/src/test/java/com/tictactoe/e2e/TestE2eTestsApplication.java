@@ -6,7 +6,7 @@ import org.testcontainers.utility.TestcontainersConfiguration;
 
 public class TestE2eTestsApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.from(E2eTestsApplication::main).with(TestcontainersConfiguration.class).run(args);
     }
 

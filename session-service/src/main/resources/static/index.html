@@ -318,9 +318,11 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Each WS push carries the *full* moveHistory so far (not just the new
-    // move), so we only print entries at or past lastMoveNum to avoid
-    // re-logging moves we've already shown.
+    // Each WS push's moveHistory carries only the move just played (see
+    // SessionMapper#toEvent), not the full history — GET /sessions/{id} is
+    // the endpoint that returns the accumulated list. The moveNumber filter
+    // below is still worth keeping: it makes this renderer correct even if
+    // a future change starts pushing more than one move per event.
     function syncLog(moveHistory) {
       if (!moveHistory || moveHistory.length === 0) return;
       const newMoves = moveHistory.filter(m => m.moveNumber >= lastMoveNum);
@@ -365,8 +367,6 @@
         return;
       }
 
-      // Destructuring: same as pulling data.board, data.status, etc.
-      // into local variables, just less repetitive.
       const { board, status, winner, moveHistory } = data;
 
       // When the first message pops in, clean the placeholder text in the log container

@@ -1,7 +1,7 @@
 package com.tictactoe.e2e;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.web.bind.support.SessionStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient;
@@ -22,16 +22,33 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Full-stack, black-box regression test for the automated Tic Tac Toe flow.
+ *
+ * <p>Spins up the entire stack (Eureka, Game Engine, Session Service, Gateway)
+ * from {@code docker-compose.yaml} via Testcontainers, then drives it exactly
+ * the way {@code index.html} does: create a session through the Gateway,
+ * subscribe to its WebSocket feed, trigger the simulation, and watch the
+ * pushed session snapshots until the game reaches a terminal status.
+ *
+ * <p>The test deliberately depends on nothing but the public HTTP/WebSocket
+ * contract — see {@link SessionResponse}, {@link SessionStatus} and
+ * {@link MoveDto} — so it exercises the services the same way any external
+ * client would, without a compile-time dependency on session-service internals.
+ */
 @Testcontainers
-class AutomatedGameFlowE2ETest {
+class AutomatedGameE2ETest {
 
     private static final int GATEWAY_INTERNAL_PORT = 8080;
 
     @Container
     private static final ComposeContainer environment =
-            new ComposeContainer(new File("src/test/resources/docker-compose-test.yml"))
+            new ComposeContainer(new File("docker-compose.yaml"))
+                    // No Actuator on the classpath here — Spring Boot's own startup
+                    // log line ("Started GatewayApplication in ...") is a reliable
+                    // signal that the context (and its embedded Netty server) is up.
                     .withExposedService("gateway", GATEWAY_INTERNAL_PORT,
-                            Wait.forHttp("/actuator/health").forStatusCode(200));
+                            Wait.forLogMessage(".*Started GatewayApplication.*\\n", 1));
 
     @Test
     void testAutomatedGameFlow() {
@@ -46,7 +63,11 @@ class AutomatedGameFlowE2ETest {
         Sinks.Many<SessionResponse> inboundWsMessagesSink = Sinks.many().replay().all();
         Sinks.One<Void> wsConnectedSink = Sinks.one();
 
-        // 1. Create Session
+        // 1. Create Session.
+        // The gateway becomes reachable before session-service has registered
+        // itself with Eureka and been picked up by the gateway's load balancer
+        // cache, so the first few requests routinely 503 — retry generously
+        // rather than adding artificial startup delays.
         SessionResponse session = webClient.post()
                 .uri("/sessions")
                 .accept(MediaType.APPLICATION_JSON)
@@ -75,6 +96,11 @@ class AutomatedGameFlowE2ETest {
                             .then();
                 })
                 .retryWhen(Retry.fixedDelay(15, Duration.ofSeconds(3)))
+                // The server closes the socket normally once the game reaches a
+                // terminal status — that has to terminate our sink too, or the
+                // StepVerifier below waits forever for a completion signal that
+                // will never come.
+                .doOnSuccess(_ -> inboundWsMessagesSink.tryEmitComplete())
                 .doOnError(err -> inboundWsMessagesSink.tryEmitError(
                         new IllegalStateException("WebSocket connection failed", err)))
                 .subscribe();
@@ -101,9 +127,13 @@ class AutomatedGameFlowE2ETest {
                         assertThat(finalResponse.status())
                                 .isIn(SessionStatus.WIN, SessionStatus.DRAW, SessionStatus.ERROR);
                     })
-                    .verifyComplete();
+                    .expectComplete()
+                    // Bounded, rather than the unbounded default: a regression that
+                    // stops the WS stream from completing should fail the test, not
+                    // hang the build forever.
+                    .verify(Duration.ofSeconds(60));
         } finally {
-            if (wsSubscription != null && !wsSubscription.isDisposed()) {
+            if (!wsSubscription.isDisposed()) {
                 wsSubscription.dispose();
             }
         }

@@ -8,6 +8,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
+/**
+ * Maps domain and validation exceptions to RFC 7807 {@link ProblemDetail}
+ * responses, so callers get a machine-readable status/detail pair instead of
+ * a generic 500 for expected error conditions (unknown game, illegal move,
+ * duplicate creation, malformed request body).
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

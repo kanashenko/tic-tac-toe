@@ -1,8 +1,32 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(winget install *)",
-      "PowerShell(git *)"
+      "Bash(rmdir *)",
+      "Bash(rm -rf BOOT-INF)",
+      "Bash(rm -rf */generated)",
+      "Bash(rm */src/test/resources/application.yaml)",
+      "Bash(unzip -l *)",
+      "Bash(xargs *)",
+      "Bash(./gradlew *)",
+      "Bash(gradlew.bat *)",
+      "Bash(docker version *)",
+      "Bash(docker compose version)",
+      "Bash(docker ps *)",
+      "Bash(docker compose logs *)",
+      "Bash(docker compose *)",
+      "Bash(docker build *)",
+      "Bash(docker network ls *)",
+      "Bash(docker rm -f *)",
+      "Bash(docker rmi *)",
+      "Bash(docker network rm *)",
+      "Bash(node --version)",
+      "Bash(node -*)",
+      "Bash(which node)",
+      "Bash(python --version)",
+      "Bash(python -c *)",
+      "Bash(which python)",
+      "Bash(git rm --cached *)",
+      "Bash(git rm -r --cached *)"
     ]
   }
 }

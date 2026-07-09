@@ -3,6 +3,7 @@ package com.tictactoe.gameengine.domain;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/** The two Tic Tac Toe players and the board symbol each one plays. */
 @Getter
 @RequiredArgsConstructor
 public enum Player {

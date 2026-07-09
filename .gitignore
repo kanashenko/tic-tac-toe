@@ -5,6 +5,12 @@ build/
 !**/src/test/**/build/
 .kotlin
 
+# IDE-generated annotation processor output (e.g. MapStruct impls) that
+# occasionally gets pointed at a source folder instead of build/ — never
+# check this in, the build regenerates it every time.
+**/src/main/generated/
+**/src/test/generated/
+
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml

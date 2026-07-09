@@ -13,6 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * The only class in this service that talks to JPA directly. Kept separate
+ * from {@link SessionService} and {@link SimulationService} so those can stay
+ * purely reactive, calling into this blocking layer via
+ * {@code Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())}.
+ */
 @Transactional
 @Service
 @RequiredArgsConstructor
@@ -25,12 +31,18 @@ public class SessionPersistenceService {
         return sessionRepository.save(entity);
     }
 
+    /**
+     * Looks up a session by ID.
+     *
+     * @throws SessionNotFoundException if {@code sessionId} does not exist
+     */
     @Transactional(readOnly = true)
     public SessionEntity findSession(String sessionId) {
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new SessionNotFoundException(sessionId));
     }
 
+    /** Marks a session as errored after its simulation loop fails unrecoverably. Silently no-ops if the session is gone. */
     public void markSessionError(String sessionId) {
         sessionRepository.findById(sessionId).ifPresent(entity -> {
             entity.setStatus(SessionStatus.ERROR);
@@ -39,11 +51,13 @@ public class SessionPersistenceService {
         });
     }
 
+    /** Returns a session's recorded moves, oldest first. */
     @Transactional(readOnly = true)
     public List<MoveEntity> findMoves(String sessionId) {
         return moveRepository.findBySessionIdOrderByMoveNumberAsc(sessionId);
     }
 
+    /** Records a move and updates the owning session's status/winner in the same transaction. */
     public void recordMove(MoveEntity move, SessionStatus status, String winner) {
         moveRepository.save(move);
         sessionRepository.findById(move.getSessionId()).ifPresent(entity -> {
