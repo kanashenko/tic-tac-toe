@@ -1,6 +1,9 @@
 spring:
   application:
     name: game-engine
+  mvc:
+    problemdetails:
+      enabled: true
 
 server:
   port: 8081

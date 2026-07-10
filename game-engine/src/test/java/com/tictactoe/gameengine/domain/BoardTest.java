@@ -38,7 +38,7 @@ class BoardTest {
         List<List<Character>> rows = board.asRows();
 
         assertThat(rows).hasSize(3);
-        assertThat(rows.get(0).get(0)).isEqualTo('X');
+        assertThat(rows.getFirst().getFirst()).isEqualTo('X');
         assertThat(rows.get(1).get(1)).isEqualTo('O');
         assertThat(rows.get(2).get(2)).isEqualTo('X');
     }

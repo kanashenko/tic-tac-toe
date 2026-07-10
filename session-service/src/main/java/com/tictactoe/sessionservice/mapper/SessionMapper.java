@@ -13,12 +13,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-/**
- * MapStruct mapper translating between JPA entities, the Game Engine's
- * client DTOs, and this service's own API DTOs. The implementation is
- * generated at build time into {@code build/generated/sources/annotationProcessor}
- * — see {@code SessionMapperImpl} there, not checked into version control.
- */
+/** Maps between JPA entities, the Game Engine's client DTOs, and this service's API DTOs. */
 @Mapper(componentModel = "spring")
 public interface SessionMapper {
 

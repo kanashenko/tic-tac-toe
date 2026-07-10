@@ -1,6 +1,9 @@
 spring:
   application:
     name: session-service
+  webflux:
+    problemdetails:
+      enabled: true
 
 server:
   port: 8082

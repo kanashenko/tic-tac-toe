@@ -5,8 +5,8 @@ import com.tictactoe.sessionservice.model.SessionStatus;
 import java.util.List;
 
 /**
- * Wire representation of a session, returned by every {@code /sessions}
- * endpoint and pushed as-is over the session's WebSocket feed.
+ * Returned by the {@code /sessions} endpoints and pushed as-is over the
+ * session's WebSocket feed.
  *
  * @param sessionId   the session identifier (also the Game Engine's game ID)
  * @param status      the session's current status

@@ -9,7 +9,6 @@ import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
 
 import java.util.Map;
 
-/** Wires {@link SessionWebSocketHandler} to the {@code /ws/sessions} path. */
 @Configuration
 @RequiredArgsConstructor
 public class WebSocketConfig {

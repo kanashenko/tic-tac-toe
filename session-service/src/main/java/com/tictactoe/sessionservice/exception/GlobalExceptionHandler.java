@@ -13,7 +13,8 @@ import java.util.stream.Collectors;
  * Maps domain and validation exceptions to RFC 7807 {@link ProblemDetail}
  * responses: an unknown session becomes 404, a Game Engine failure becomes
  * 502 (this service acting as a gateway to it), and a malformed request body
- * becomes 400.
+ * becomes 400. Framework-level client errors are rendered as ProblemDetail
+ * too, via {@code spring.webflux.problemdetails.enabled}.
  */
 @Slf4j
 @RestControllerAdvice

@@ -10,13 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.UnaryOperator;
 
 /**
- * In-memory store of {@link Game} state, keyed by game ID.
- *
- * <p>Backed by a {@link ConcurrentHashMap} rather than a database — per the
+ * In-memory store of {@link Game} state, keyed by game ID — per the
  * assignment, game state only needs to live for the duration of the process.
- * {@link #update(String, UnaryOperator)} uses {@link ConcurrentHashMap#compute}
- * so that concurrent move requests for the same game are applied atomically
- * one at a time, instead of racing on a read-modify-write.
  */
 @Repository
 public class GameRepository {
@@ -42,9 +37,8 @@ public class GameRepository {
     }
 
     /**
-     * Atomically replaces the stored game with the result of applying
-     * {@code updater} to it — the mechanism that keeps concurrent moves on
-     * the same game from being applied to a stale board.
+     * Applies {@code updater} to the stored game via {@link ConcurrentHashMap#compute},
+     * so concurrent moves on the same game can't race on a read-modify-write.
      *
      * @throws GameNotFoundException if {@code gameId} does not exist
      */

@@ -122,7 +122,7 @@ public class SimulationService {
                 state.game().gameId(), state.moveNumber(), player, cell.row(), cell.col());
 
         return Mono.delay(moveDelay)
-                .flatMap(tick -> gameEngineClient.makeMove(state.game().gameId(), request))
+                .flatMap(_ -> gameEngineClient.makeMove(state.game().gameId(), request))
                 .flatMap(updated -> persistAndBroadcast(state.game().gameId(), state.moveNumber(), player, cell, updated)
                         .thenReturn(new SimulationState(updated, state.moveNumber() + 1)))
                 .onErrorResume(ex -> reportError(state.game().gameId(), state.game(), ex)

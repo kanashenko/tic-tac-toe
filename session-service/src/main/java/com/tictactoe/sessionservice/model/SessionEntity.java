@@ -5,7 +5,6 @@ import lombok.*;
 
 import java.time.Instant;
 
-/** JPA entity backing the {@code sessions} table (H2, in-memory). */
 @Entity
 @Table(name = "sessions")
 @Getter

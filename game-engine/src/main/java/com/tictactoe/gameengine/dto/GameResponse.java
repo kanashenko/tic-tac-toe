@@ -6,7 +6,7 @@ import com.tictactoe.gameengine.domain.GameStatus;
 import java.util.List;
 
 /**
- * Wire representation of a {@link Game}, returned by every Game Engine endpoint.
+ * Returned by every Game Engine endpoint.
  *
  * @param gameId the game identifier
  * @param board  the board as 3 rows of 3 symbols ({@code '-'} for an empty cell)

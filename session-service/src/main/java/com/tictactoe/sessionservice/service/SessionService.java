@@ -65,13 +65,18 @@ public class SessionService {
      */
     public Mono<SessionResponse> getSession(String sessionId) {
         return findSession(sessionId)
-                .flatMap(entity -> Mono.zip(findMoves(sessionId), liveStateIfAny(sessionId))
+                .flatMap(entity -> Mono.zip(findMoves(sessionId), liveStateIfPresent(sessionId))
                         .map(tuple -> tuple.getT2()
                                 .map(live -> sessionMapper.toSessionResponse(entity, tuple.getT1(), live))
                                 .orElseGet(() -> sessionMapper.toPendingResponse(entity, tuple.getT1()))));
     }
 
-    private Mono<Optional<GameEngineResponse>> liveStateIfAny(String sessionId) {
+    /**
+     * Fetches the session's current state from the Game Engine, or
+     * {@link Optional#empty()} if its game hasn't been created yet — i.e. the
+     * session exists but has never been simulated.
+     */
+    private Mono<Optional<GameEngineResponse>> liveStateIfPresent(String sessionId) {
         return gameEngineClient.getGameIfExists(sessionId)
                 .map(Optional::of)
                 .defaultIfEmpty(Optional.empty());

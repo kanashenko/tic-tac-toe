@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,13 +69,22 @@ class GameControllerTest {
     }
 
     @Test
-    void moveWithAMalformedRequestBodyReturns400() throws Exception {
+    void moveWithValuesThatFailValidationReturns400() throws Exception {
         mockMvc.perform(post("/games/{gameId}/move", "g1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"player": "Z", "row": 9, "col": 0}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void moveWithUnreadableJsonReturns400AsProblemDetail() throws Exception {
+        mockMvc.perform(post("/games/{gameId}/move", "g1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ not json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
     }
 
     @Test
