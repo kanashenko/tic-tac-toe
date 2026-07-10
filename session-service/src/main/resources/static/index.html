@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe — Microservices Demo</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+          --bg: #0f0f11;
+          --surface: #1a1a1f;
+          --surface2: #222228;
+          --border: #2e2e38;
+          --border2: #3d3d4d;
+          --text: #e8e8f0;
+          --text-muted: #888899;
+          --accent: #7c6af7;
+          --accent-dim: #3d3566;
+          --x-color: #f07070;
+          --o-color: #70c8f0;
+          --radius: 10px;
+        }
+
+        body {
+          font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+          background: var(--bg);
+          color: var(--text);
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem 1rem;
+          gap: 1.75rem;
+        }
+
+        header { text-align: center; }
+        header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+        header p  { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
+
+        .status-bar {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          font-size: 0.9rem;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          padding: 0.4rem 1.1rem;
+          min-width: 240px;
+          justify-content: center;
+        }
+
+        .status-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: var(--text-muted);
+          flex-shrink: 0;
+          transition: background 0.3s;
+        }
+        .status-dot.idle    { background: var(--text-muted); }
+        .status-dot.running { background: #70f0a0; animation: pulse 1.2s infinite; }
+        .status-dot.done    { background: var(--accent); }
+        .status-dot.error   { background: var(--x-color); }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.35; }
+        }
+
+        .board-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.1rem;
+        }
+
+        .players {
+          display: flex;
+          gap: 1.5rem;
+          font-size: 0.82rem;
+          color: var(--text-muted);
+        }
+        .player { display: flex; align-items: center; gap: 0.4rem; }
+        .player-sym { font-weight: 700; font-size: 0.95rem; }
+        .player-sym.x { color: var(--x-color); }
+        .player-sym.o { color: var(--o-color); }
+
+        .board {
+          display: grid;
+          grid-template-columns: repeat(3, 100px);
+          grid-template-rows: repeat(3, 100px);
+          gap: 6px;
+        }
+
+        .cell {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 2.4rem;
+          font-weight: 700;
+          transition: background 0.2s, border-color 0.2s;
+          user-select: none;
+        }
+        .cell.x    { color: var(--x-color); }
+        .cell.o    { color: var(--o-color); }
+        .cell.win  { background: var(--accent-dim); border-color: var(--accent); }
+
+        .controls { display: flex; gap: 0.75rem; }
+
+        button {
+          padding: 0.55rem 1.4rem;
+          border-radius: 999px;
+          border: 1px solid var(--border2);
+          background: var(--surface2);
+          color: var(--text);
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+          font-family: inherit;
+          font-weight: 500;
+        }
+        button:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        button.primary:hover:not(:disabled) { background: #6a5ae0; border-color: #6a5ae0; }
+
+        .ws-badge {
+          font-size: 0.72rem;
+          color: var(--text-muted);
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+        }
+        .ws-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+        .ws-dot.connected { background: #70f0a0; }
+
+        .log-wrap { width: 322px; }
+        .log-label {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 0.5rem;
+          padding-left: 2px;
+        }
+        .log {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          height: 164px;
+          overflow-y: auto;
+          padding: 0.75rem;
+          font-size: 0.8rem;
+          font-family: 'SF Mono', 'Fira Code', monospace;
+          line-height: 1.75;
+          color: var(--text-muted);
+          scroll-behavior: smooth;
+        }
+        .log-entry { display: flex; gap: 0.5rem; }
+        .log-num    { color: var(--border2); min-width: 2.5ch; }
+        .log-x      { color: var(--x-color); }
+        .log-o      { color: var(--o-color); }
+        .log-pos    { color: var(--text); }
+        .log-result { color: var(--accent); }
+
+        .error-msg {
+          background: #2a1515;
+          border: 1px solid #5a2020;
+          border-radius: var(--radius);
+          color: var(--x-color);
+          font-size: 0.82rem;
+          padding: 0.6rem 1rem;
+          max-width: 322px;
+          display: none;
+          text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Tic Tac Toe</h1>
+    <p>Microservices auto-simulation</p>
+</header>
+
+<div class="status-bar">
+    <div class="status-dot idle" id="status-dot"></div>
+    <span id="status-text">Ready to start</span>
+</div>
+
+<div class="board-wrap">
+    <div class="players">
+        <div class="player"><span class="player-sym x">X</span> Player 1</div>
+        <div class="player"><span class="player-sym o">O</span> Player 2</div>
+    </div>
+
+    <div class="board" id="board">
+        <div class="cell" id="c00"></div><div class="cell" id="c01"></div><div class="cell" id="c02"></div>
+        <div class="cell" id="c10"></div><div class="cell" id="c11"></div><div class="cell" id="c12"></div>
+        <div class="cell" id="c20"></div><div class="cell" id="c21"></div><div class="cell" id="c22"></div>
+    </div>
+
+    <div class="controls">
+        <button class="primary" id="btn-start">Start simulation</button>
+        <button id="btn-reset" disabled>Reset</button>
+    </div>
+
+    <div class="ws-badge">
+        <div class="ws-dot" id="ws-dot"></div>
+        <span id="ws-status">WebSocket disconnected</span>
+    </div>
+</div>
+
+<div class="log-wrap">
+    <div class="log-label">Move log</div>
+    <div class="log" id="log"><span style="color:var(--border2)">— waiting for game —</span></div>
+</div>
+
+<div class="error-msg" id="error-msg"></div>
+
+<script>
+    // ============================================================
+    // Config — matches SessionController's @RequestMapping("/sessions")
+    // and the WebSocket handler's ?sessionId= query param.
+    // Adjust the host/port here once things move behind the Gateway.
+    // ============================================================
+    const SESSION_URL = 'http://localhost:8080/sessions';
+    const WS_BASE     = 'ws://localhost:8080/ws/sessions';
+
+    // Board.EMPTY on the Game Engine side is the '-' char. Jackson serializes
+    // a Java `Character` as a one-character JSON string, so an empty cell
+    // arrives over the wire as the string "-", not null.
+    const EMPTY_SYMBOL = '-';
+
+    const btnStart  = document.getElementById('btn-start');
+    const btnReset  = document.getElementById('btn-reset');
+    const statusDot = document.getElementById('status-dot');
+    const statusTxt = document.getElementById('status-text');
+    const logEl     = document.getElementById('log');
+    const errEl     = document.getElementById('error-msg');
+    const wsDot     = document.getElementById('ws-dot');
+    const wsTxt     = document.getElementById('ws-status');
+
+    let ws          = null;
+    let sessionId   = null;
+    let lastMoveNum = 0; // smallest MoveDto.moveNumber not yet printed to the log
+
+    function setStatus(state, text) {
+      statusDot.className = 'status-dot ' + state;
+      statusTxt.textContent = text;
+    }
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+    }
+
+    function clearError() { errEl.style.display = 'none'; }
+
+    function clearBoard() {
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const cell = document.getElementById('c' + r + c);
+          cell.textContent = '';
+          cell.className = 'cell';
+        }
+      }
+    }
+
+    // Normalizes one raw board cell ("-" / "X" / "O" / null) into a display
+    // symbol ('' / 'X' / 'O'). Centralized here so renderBoard and
+    // highlightWin can't disagree on what "empty" means.
+    function cellSymbol(raw) {
+      if (raw === null || raw === undefined) return '';
+      const s = String(raw).trim();
+      return s === EMPTY_SYMBOL ? '' : s;
+    }
+
+    function renderBoard(board) {
+      if (!board) return;
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const sym  = cellSymbol(board[r][c]);
+          const cell = document.getElementById('c' + r + c);
+          cell.textContent = sym;
+          cell.className   = 'cell' + (sym ? ' ' + sym.toLowerCase() : '');
+        }
+      }
+    }
+
+    const WIN_LINES = [
+      [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]],
+      [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]],
+      [[0,0],[1,1],[2,2]], [[0,2],[1,1],[2,0]]
+    ];
+
+    function highlightWin(board, winner) {
+      if (!winner || !board) return;
+      for (const line of WIN_LINES) {
+        const isWinningLine = line.every(([r, c]) => cellSymbol(board[r][c]) === winner);
+        if (isWinningLine) {
+          line.forEach(([r, c]) => document.getElementById('c' + r + c).classList.add('win'));
+          return;
+        }
+      }
+    }
+
+    function appendLog(html) {
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.innerHTML = html;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Each WS push's moveHistory carries only the move just played (see
+    // SessionMapper#toEvent), not the full history — GET /sessions/{id} is
+    // the endpoint that returns the accumulated list. The moveNumber filter
+    // below is still worth keeping: it makes this renderer correct even if
+    // a future change starts pushing more than one move per event.
+    function syncLog(moveHistory) {
+      if (!moveHistory || moveHistory.length === 0) return;
+      const newMoves = moveHistory.filter(m => m.moveNumber >= lastMoveNum);
+      newMoves.forEach(m => {
+        const cls = m.player.toLowerCase();
+        appendLog(
+          `<span class="log-num">${m.moveNumber + 1}.</span>` +
+          `<span class="log-${cls}"> ${m.player}</span>` +
+          `<span class="log-pos"> → [${m.row}, ${m.col}]</span>`
+        );
+        lastMoveNum = m.moveNumber + 1;
+      });
+    }
+
+    // SessionStatus is IN_PROGRESS / WIN / DRAW / ERROR — match exactly what
+    // the backend can send (see SessionStatus enum in session-service).
+    function isTerminal(status) {
+      return status === 'WIN' || status === 'DRAW' || status === 'ERROR';
+    }
+
+    function onGameOver(board, winner, status) {
+      if (status === 'ERROR') {
+        appendLog(`<span class="log-result" style="color:var(--x-color)">Session reported an error — simulation stopped.</span>`);
+        showError('The game session reported an internal error.');
+        setStatus('error', 'Error');
+      } else {
+        highlightWin(board, winner);
+        const result = status === 'WIN' ? `${winner || '?'} wins!` : "It's a draw!";
+        appendLog(`<span class="log-result">${result}</span>`);
+        setStatus('done', result);
+      }
+      btnReset.disabled = false;
+      if (ws) ws.close();
+    }
+
+    function handleWsMessage(event) {
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch (e) {
+        console.warn('WS parse error', e);
+        return;
+      }
+
+      const { board, status, winner, moveHistory } = data;
+
+      // When the first message pops in, clean the placeholder text in the log container
+      if (lastMoveNum === 0 && logEl.querySelector('span')) {
+        logEl.innerHTML = '';
+      }
+
+      renderBoard(board);
+      syncLog(moveHistory);
+
+      if (status === 'IN_PROGRESS') {
+        setStatus('running', 'Game in progress…');
+      } else if (isTerminal(status)) {
+        onGameOver(board, winner, status);
+      }
+    }
+
+    // Returns a Promise that resolves once the socket is actually open,
+    // so callers can `await` the real connection instead of guessing with
+    // a fixed setTimeout (the old code waited a flat 350ms and hoped).
+    function connectWebSocket(sid) {
+      return new Promise((resolve, reject) => {
+        let opened = false;
+        ws = new WebSocket(WS_BASE + '?sessionId=' + encodeURIComponent(sid));
+
+        ws.onopen = () => {
+          opened = true;
+          wsDot.className = 'ws-dot connected';
+          wsTxt.textContent = 'WebSocket connected';
+          resolve();
+        };
+
+        ws.onmessage = handleWsMessage;
+
+        ws.onerror = () => {
+          if (!opened) {
+            reject(new Error('Could not open WebSocket — is session-service running on port 8080?'));
+          } else {
+            showError('WebSocket error during the game.');
+            setStatus('error', 'Connection lost');
+            btnStart.disabled = false;
+            btnReset.disabled = false;
+          }
+        };
+
+        ws.onclose = () => {
+          wsDot.className = 'ws-dot';
+          wsTxt.textContent = 'WebSocket disconnected';
+        };
+      });
+    }
+
+    async function startSimulation() {
+      clearError();
+      clearBoard();
+      lastMoveNum = 0;
+      logEl.innerHTML = '<span style="color:var(--border2)">— starting simulation —</span>';
+      btnStart.disabled = true;
+      btnReset.disabled = true;
+
+      // Set single stable setup status to prevent label flickering
+      setStatus('running', 'Starting simulation…');
+
+      try {
+        // Step 1: Session creation
+        const createRes = await fetch(SESSION_URL, { method: 'POST' });
+        if (!createRes.ok) throw new Error('POST /sessions failed: ' + createRes.status);
+        const session = await createRes.json();
+        sessionId = session.sessionId;
+
+        // Step 2: Establish connection
+        await connectWebSocket(sessionId);
+
+        // Step 3: Fire up simulation loop
+        const simRes = await fetch(`${SESSION_URL}/${sessionId}/simulate`, { method: 'POST' });
+        if (!simRes.ok) throw new Error('POST /simulate failed: ' + simRes.status);
+
+        // NOTE: We do NOT update the status label here.
+        // The text will naturally transition to "Game in progress…" when
+        // the first live move data event hits handleWsMessage().
+      } catch (err) {
+        showError(err.message);
+        setStatus('error', 'Error');
+        if (ws) { ws.close(); ws = null; }
+        btnStart.disabled = false;
+        logEl.innerHTML = '<span style="color:var(--border2)">— simulation failed —</span>';
+      }
+    }
+
+    function reset() {
+      if (ws) ws.close();
+      clearBoard();
+      lastMoveNum = 0;
+      logEl.innerHTML = '<span style="color:var(--border2)">— waiting for game —</span>';
+      setStatus('idle', 'Ready to start');
+      btnStart.disabled = false;
+      btnReset.disabled = true;
+      clearError();
+      sessionId = null;
+    }
+
+    btnStart.addEventListener('click', startSimulation);
+    btnReset.addEventListener('click', reset);
+</script>
+</body>
+</html>

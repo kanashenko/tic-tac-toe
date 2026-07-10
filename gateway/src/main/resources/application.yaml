@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: game-engine
+              uri: lb://game-engine
+              predicates:
+                - Path=/games/**
+
+            - id: session-service-ws
+              uri: lb:ws://session-service
+              predicates:
+                - Path=/ws/**
+
+            - id: session-service-http
+              uri: lb://session-service
+              predicates:
+                - Path=/sessions/**
+
+            - id: session-service-ui
+              uri: lb://session-service
+              predicates:
+                - Path=/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    prefer-ip-address: true

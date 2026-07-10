@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: session-service
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop   # ephemeral in-memory H2 — schema is rebuilt each start
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  webflux:
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8082
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+game-engine:
+  url: http://game-engine
+
+simulation:
+  move-delay: 700ms
